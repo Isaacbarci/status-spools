@@ -3,9 +3,11 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Relatório de Spools por Status</title>
+  <title>Relatório de Spools + % por Status</title>
 
+  <!-- Exportar Excel (filtrado) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Gráfico Pizza por Status -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <style>
@@ -17,153 +19,415 @@
     button,input,select{padding:10px;font-size:14px}
     input{flex:1;min-width:220px}
     button{cursor:pointer;background:#1976d2;color:#fff;border:none;border-radius:4px}
+    button:hover{opacity:.9}
     select{border:1px solid #ddd;border-radius:4px;background:#fff}
     .muted{font-size:12px;color:#555;width:100%}
+
     .grid{display:grid;grid-template-columns:1fr;gap:12px}
     @media (min-width:980px){ .grid{grid-template-columns:1.2fr .8fr} }
-    .card{border:1px solid #eee;border-radius:8px;padding:10px;background:#fff}
+
+    .card{border:1px solid #eee;border-radius:8px;padding:10px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.04)}
     .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#eee;font-size:12px}
+
+    .table-wrapper{width:100%;overflow-x:auto;margin-top:8px}
     table{border-collapse:collapse;width:100%;min-width:900px}
-    th,td{border:1px solid #ddd;padding:8px;white-space:nowrap}
-    th{background:#f1f1f1;position:sticky;top:0}
+    th,td{border:1px solid #ddd;padding:8px;text-align:left;white-space:nowrap}
+    th{background:#f1f1f1;position:sticky;top:0;z-index:1}
+    tbody tr:nth-child(even){background:#fafafa}
+    tfoot th{background:#e9e9e9}
+
+    @media (max-width:600px){
+      h2{font-size:18px}
+      button,input,select{width:100%}
+      table{font-size:13px}
+    }
   </style>
 </head>
+
 <body>
-
 <div class="container">
-<h2>Relatório de Spools por Status</h2>
 
-<div class="top">
-  <button id="btn">Atualizar</button>
-  <input id="filtro" placeholder="Filtrar texto">
-  <select id="fRomaneio">
-    <option value="TODOS">Romaneio: Todos</option>
-    <option value="COM">Romaneio: Com</option>
-    <option value="SEM">Romaneio: Sem</option>
-  </select>
-  <select id="fProg">
-    <option value="TODOS">Programação: Todos</option>
-    <option value="COM">Programação: Com</option>
-    <option value="SEM">Programação: Sem</option>
-  </select>
-  <button id="btnExport">Exportar Excel</button>
-  <button id="btnPizza">Pizza: Peso</button>
-  <div class="muted" id="status">Carregando...</div>
-</div>
+  <h2>Relatório de Spools + % por Status</h2>
 
-<div class="grid">
-  <div class="card">
-    <span class="pill" id="pillLinhas">0 linhas</span>
-    <table>
-      <thead>
-        <tr>
-          <th>Serviço</th><th>Local</th><th>Material</th>
-          <th>Prog Fab</th><th>Status</th><th>Qtd</th><th>Peso</th>
-        </tr>
-      </thead>
-      <tbody id="tb"></tbody>
-    </table>
+  <div class="top">
+    <button id="btn">Atualizar</button>
+
+    <input id="filtro" placeholder="Filtrar (ex: NOVUS ANDRADINA LIBERADO)">
+
+    <select id="fRomaneio" title="Romaneio = STATUS preenchido/vazio">
+      <option value="TODOS">Romaneio: Todos</option>
+      <option value="COM">Romaneio: Com</option>
+      <option value="SEM">Romaneio: Sem</option>
+    </select>
+
+    <select id="fProg" title="Programação = PROG FAB preenchido/vazio">
+      <option value="TODOS">Programação: Todos</option>
+      <option value="COM">Programação: Com</option>
+      <option value="SEM">Programação: Sem</option>
+    </select>
+
+    <button id="btnExport">Exportar Excel (filtrado)</button>
+    <button id="btnPizza">Pizza: Peso</button>
+
+    <div class="muted" id="status">Carregando...</div>
   </div>
 
-  <div class="card">
-    <span class="pill" id="pillStatus">0 status</span>
-    <canvas id="pizza" height="280"></canvas>
+  <div class="grid">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <strong>Detalhado</strong>
+        <span class="pill" id="pillLinhas">0 linhas</span>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Serviço</th>
+              <th>Local</th>
+              <th>Material</th>
+              <th>Prog Fab</th>
+              <th>Status</th>
+              <th>Qtd</th>
+              <th>Peso</th>
+            </tr>
+          </thead>
+          <tbody id="tb"></tbody>
+          <tfoot>
+            <tr>
+              <th colspan="5">TOTAL (filtrado)</th>
+              <th id="tq">0</th>
+              <th id="tp">0,00</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <strong>Resumo por Status</strong>
+        <span class="pill" id="pillStatus">0 status</span>
+        <span class="pill" id="pizzaInfo">Modo: Peso</span>
+      </div>
+
+      <div class="table-wrapper">
+        <table style="min-width:650px">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Qtd</th>
+              <th>% Qtd</th>
+              <th>Peso</th>
+              <th>% Peso</th>
+            </tr>
+          </thead>
+          <tbody id="tbStatus"></tbody>
+          <tfoot>
+            <tr>
+              <th>TOTAL</th>
+              <th id="tq2">0</th>
+              <th>100%</th>
+              <th id="tp2">0,00</th>
+              <th>100%</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div style="margin-top:12px">
+        <canvas id="pizza" height="260"></canvas>
+      </div>
+    </div>
   </div>
-</div>
 </div>
 
 <script>
-const SHEET_ID = "1mMobUTfuUuZ5fDj-CANPGxX3EL-7LgQZ1JzQZwVluB0";
-const URL = `https://opensheet.elk.sh/${SHEET_ID}/DADOS`;
+  // ====== GOOGLE SHEETS (SEU LINK) ======
+  const SHEET_ID = "1mMobUTfuUuZ5fDj-CANPGxX3EL-7LgQZ1JzQZwVluB0";
+  const ABA = "DADOS";
+  const URL = `https://opensheet.elk.sh/${SHEET_ID}/${ABA}`;
+  // =====================================
 
-let cache=[], ultimoFiltrado=[], pizzaChart=null, pizzaModo="PESO";
+  let cache = [];
+  let timerFiltro = null;
+  let ultimoFiltrado = [];
+  let pizzaChart = null;
+  let pizzaModo = "PESO"; // "PESO" ou "QTD"
 
-function valorPreenchido(v){
-  let s=String(v??"").replace(/\u00A0/g," ").trim();
-  if(!s) return false;
-  const u=s.toUpperCase();
-  return !(u==="N/A"||u==="NA"||u==="-"||u==="—");
-}
-function toNum(v){return Number(String(v||0).replace(/\./g,"").replace(",","."))||0}
-function fmt(n){return n.toLocaleString("pt-BR",{minimumFractionDigits:2})}
+  function setStatus(msg){ document.getElementById("status").textContent = msg; }
 
-function render(lista){
-  const tb=document.getElementById("tb"); tb.innerHTML="";
-  let tot=0;
-  lista.forEach(r=>{
-    const q=Number(r["QTD SPOOLS"]||0);
-    const p=toNum(r["PESO TOTAL"]);
-    tot+=p;
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r["SERVIÇO"]||""}</td><td>${r["LOCAL FABRICAÇÃO"]||""}</td>
-      <td>${r["MATERIAL"]||""}</td><td>${r["PROG FAB"]||""}</td>
-      <td>${r["STATUS"]||""}</td><td>${q}</td><td>${fmt(p)}</td>`;
-    tb.appendChild(tr);
-  });
-  document.getElementById("pillLinhas").textContent=lista.length+" linhas";
-  atualizarPizza(lista);
-}
+  function toNumberPtBR(v){
+    if (v == null) return 0;
+    if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+    const s = String(v).trim();
+    if (!s) return 0;
+    const norm = s.replace(/\./g,"").replace(",",".");
+    const n = Number(norm);
+    return Number.isFinite(n) ? n : 0;
+  }
 
-function aplicarFiltro(){
-  const txt=document.getElementById("filtro").value.toUpperCase();
-  const fRom=document.getElementById("fRomaneio").value;
-  const fProg=document.getElementById("fProg").value;
+  function toIntSafe(v){ return Math.round(toNumberPtBR(v)); }
 
-  let f=cache.filter(r=>{
-    if(txt){
-      const s=[r["SERVIÇO"],r["LOCAL FABRICAÇÃO"],r["MATERIAL"],r["STATUS"]].join(" ").toUpperCase();
-      if(!s.includes(txt)) return false;
-    }
-    const temRom=valorPreenchido(r["STATUS"]);
-    if(fRom==="COM"&&!temRom) return false;
-    if(fRom==="SEM"&&temRom) return false;
+  function fmtPeso(n){
+    return (n ?? 0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
 
-    const temProg=valorPreenchido(r["PROG FAB"]);
-    if(fProg==="COM"&&!temProg) return false;
-    if(fProg==="SEM"&&temProg) return false;
+  function fmtPct(x){
+    const v = (x ?? 0) * 100;
+    return v.toLocaleString("pt-BR",{maximumFractionDigits:2}) + "%";
+  }
+
+  // ✅ trata espaços invisíveis / N/A / - como vazio
+  function valorPreenchido(v){
+    let s = String(v ?? "")
+      .replace(/\u00A0/g, " ")   // NBSP
+      .replace(/\s+/g, " ")      // compacta espaços
+      .trim();
+
+    if (!s) return false;
+
+    const u = s.toUpperCase();
+    if (u === "N/A" || u === "NA" || u === "-" || u === "—") return false;
 
     return true;
+  }
+
+  function buildRowSafe(tbody, cells){
+    const tr = document.createElement("tr");
+    for (const c of cells){
+      const td = document.createElement("td");
+      td.textContent = c ?? "";
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+
+  function renderDetalhado(lista){
+    const tb = document.getElementById("tb");
+    tb.innerHTML = "";
+
+    let totalQtd = 0;
+    let totalPeso = 0;
+
+    for(const row of lista){
+      if ((row["SERVIÇO"] || "").toUpperCase() === "TOTAL GERAL") continue;
+
+      const qtd = toIntSafe(row["QTD SPOOLS"]);
+      const peso = toNumberPtBR(row["PESO TOTAL"]);
+
+      totalQtd += qtd;
+      totalPeso += peso;
+
+      buildRowSafe(tb, [
+        row["SERVIÇO"] ?? "",
+        row["LOCAL FABRICAÇÃO"] ?? "",
+        row["MATERIAL"] ?? "",
+        row["PROG FAB"] ?? "",
+        row["STATUS"] ?? "",
+        String(qtd),
+        fmtPeso(peso)
+      ]);
+    }
+
+    document.getElementById("tq").textContent = totalQtd;
+    document.getElementById("tp").textContent = fmtPeso(totalPeso);
+    document.getElementById("pillLinhas").textContent = lista.length + " linhas";
+    return { totalQtd, totalPeso };
+  }
+
+  function agruparPorStatus(lista){
+    const mapa = new Map();
+    for (const row of lista){
+      const rawStatus = row["STATUS"];
+      const st = valorPreenchido(rawStatus) ? String(rawStatus).trim() : "SEM STATUS";
+
+      const qtd = toIntSafe(row["QTD SPOOLS"]);
+      const peso = toNumberPtBR(row["PESO TOTAL"]);
+
+      const cur = mapa.get(st) || { qtd:0, peso:0 };
+      cur.qtd += qtd;
+      cur.peso += peso;
+      mapa.set(st, cur);
+    }
+    return [...mapa.entries()].sort((a,b) => b[1].peso - a[1].peso);
+  }
+
+  function renderResumoStatus(lista, totalQtd, totalPeso){
+    const tb = document.getElementById("tbStatus");
+    tb.innerHTML = "";
+
+    const itens = agruparPorStatus(lista);
+
+    for (const [st, v] of itens){
+      const pctQtd = totalQtd > 0 ? (v.qtd / totalQtd) : 0;
+      const pctPeso = totalPeso > 0 ? (v.peso / totalPeso) : 0;
+
+      buildRowSafe(tb, [
+        st,
+        String(v.qtd),
+        fmtPct(pctQtd),
+        fmtPeso(v.peso),
+        fmtPct(pctPeso)
+      ]);
+    }
+
+    document.getElementById("tq2").textContent = totalQtd;
+    document.getElementById("tp2").textContent = fmtPeso(totalPeso);
+    document.getElementById("pillStatus").textContent = itens.length + " status";
+  }
+
+  function atualizarPizza(lista){
+    const itens = agruparPorStatus(lista);
+
+    const labels = itens.map(([st]) => st);
+    const values = itens.map(([,v]) => pizzaModo === "PESO" ? v.peso : v.qtd);
+
+    document.getElementById("pizzaInfo").textContent =
+      "Modo: " + (pizzaModo === "PESO" ? "Peso" : "Qtd");
+
+    const canvas = document.getElementById("pizza");
+    if (!canvas) return;
+
+    if (pizzaChart) pizzaChart.destroy();
+
+    pizzaChart = new Chart(canvas, {
+      type: "pie",
+      data: { labels, datasets: [{ data: values }] },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: "bottom" },
+          tooltip: {
+            callbacks: {
+              label: (tt) => {
+                const label = tt.label ?? "";
+                const v = tt.raw ?? 0;
+                return pizzaModo === "PESO" ? `${label}: ${fmtPeso(v)}` : `${label}: ${v}`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function exportarExcelFiltrado(){
+    if (!ultimoFiltrado || ultimoFiltrado.length === 0){
+      alert("Nada filtrado para exportar.");
+      return;
+    }
+
+    const colunas = [
+      "SERVIÇO","LOCAL FABRICAÇÃO","MATERIAL",
+      "PROG FAB","STATUS","QTD SPOOLS","PESO TOTAL"
+    ];
+
+    const dados = ultimoFiltrado.map(r => {
+      const o = {};
+      for (const c of colunas) o[c] = r[c] ?? "";
+      return o;
+    });
+
+    const ws = XLSX.utils.json_to_sheet(dados, { header: colunas });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "FILTRADO");
+
+    const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,"-");
+    XLSX.writeFile(wb, `relatorio_filtrado_${stamp}.xlsx`);
+  }
+
+  function aplicarFiltro(){
+    const texto = document.getElementById("filtro").value.trim().toUpperCase();
+    const termos = texto.split(/\s+/).filter(Boolean);
+
+    const fRom = document.getElementById("fRomaneio").value; // STATUS
+    const fProg = document.getElementById("fProg").value;     // PROG FAB
+
+    // ✅ Atalho: sem texto e selects em TODOS => mostra tudo
+    if (termos.length === 0 && fRom === "TODOS" && fProg === "TODOS") {
+      ultimoFiltrado = cache;
+      const tot = renderDetalhado(cache);
+      renderResumoStatus(cache, tot.totalQtd, tot.totalPeso);
+      atualizarPizza(cache);
+      return;
+    }
+
+    const filtrado = cache.filter(row => {
+      // texto (AND)
+      if (termos.length){
+        const s = [
+          row["SERVIÇO"],
+          row["LOCAL FABRICAÇÃO"],
+          row["MATERIAL"],
+          row["PROG FAB"],
+          row["STATUS"]
+        ].join(" ").toUpperCase();
+
+        if (!termos.every(t => s.includes(t))) return false;
+      }
+
+      // Romaneio: STATUS preenchido?
+      const temRomaneio = valorPreenchido(row["STATUS"]);
+      if (fRom === "COM" && !temRomaneio) return false;
+      if (fRom === "SEM" && temRomaneio) return false;
+
+      // Programação: PROG FAB preenchido?
+      const temProg = valorPreenchido(row["PROG FAB"]);
+      if (fProg === "COM" && !temProg) return false;
+      if (fProg === "SEM" && temProg) return false;
+
+      return true;
+    });
+
+    ultimoFiltrado = filtrado;
+
+    const tot = renderDetalhado(filtrado);
+    renderResumoStatus(filtrado, tot.totalQtd, tot.totalPeso);
+    atualizarPizza(filtrado);
+  }
+
+  function debounceFiltro(){
+    clearTimeout(timerFiltro);
+    timerFiltro = setTimeout(aplicarFiltro, 150);
+  }
+
+  async function carregar(){
+    setStatus("Atualizando...");
+    try{
+      const r = await fetch(URL, { cache:"no-store" });
+      if(!r.ok){
+        setStatus("Erro ao carregar (" + r.status + ")");
+        return;
+      }
+      const data = await r.json();
+      cache = Array.isArray(data) ? data : [];
+
+      setStatus("Linhas recebidas: " + cache.length + " | " + new Date().toLocaleString("pt-BR"));
+      aplicarFiltro();
+    }catch(err){
+      console.error(err);
+      setStatus("Falha de rede / planilha sem acesso público.");
+    }
+  }
+
+  // Eventos
+  document.getElementById("btn").addEventListener("click", carregar);
+  document.getElementById("filtro").addEventListener("input", debounceFiltro);
+
+  document.getElementById("fRomaneio").addEventListener("change", aplicarFiltro);
+  document.getElementById("fProg").addEventListener("change", aplicarFiltro);
+
+  document.getElementById("btnExport").addEventListener("click", exportarExcelFiltrado);
+
+  document.getElementById("btnPizza").addEventListener("click", () => {
+    pizzaModo = (pizzaModo === "PESO") ? "QTD" : "PESO";
+    document.getElementById("btnPizza").textContent = pizzaModo === "PESO" ? "Pizza: Peso" : "Pizza: Qtd";
+    atualizarPizza(ultimoFiltrado);
   });
-  ultimoFiltrado=f;
-  render(f);
-}
 
-function atualizarPizza(lista){
-  const m={};
-  lista.forEach(r=>{
-    const st=r["STATUS"]||"SEM STATUS";
-    m[st]=(m[st]||0)+(pizzaModo==="PESO"?toNum(r["PESO TOTAL"]):Number(r["QTD SPOOLS"]||0));
-  });
-  const labels=Object.keys(m), data=Object.values(m);
-  if(pizzaChart) pizzaChart.destroy();
-  pizzaChart=new Chart(document.getElementById("pizza"),{
-    type:"pie",
-    data:{labels,datasets:[{data}]},
-    options:{plugins:{legend:{position:"bottom"}}}
-  });
-}
-
-async function carregar(){
-  const r=await fetch(URL);
-  cache=await r.json();
-  aplicarFiltro();
-  document.getElementById("status").textContent="Atualizado "+new Date().toLocaleString("pt-BR");
-}
-
-document.getElementById("btn").onclick=carregar;
-document.getElementById("filtro").oninput=aplicarFiltro;
-document.getElementById("fRomaneio").onchange=aplicarFiltro;
-document.getElementById("fProg").onchange=aplicarFiltro;
-document.getElementById("btnPizza").onclick=()=>{pizzaModo=pizzaModo==="PESO"?"QTD":"PESO";aplicarFiltro()};
-document.getElementById("btnExport").onclick=()=>{
-  if(!ultimoFiltrado.length)return alert("Nada para exportar");
-  const ws=XLSX.utils.json_to_sheet(ultimoFiltrado);
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,"FILTRADO");
-  XLSX.writeFile(wb,"relatorio_filtrado.xlsx");
-};
-
-carregar();
+  carregar();
 </script>
+
 </body>
 </html>
