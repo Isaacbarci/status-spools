@@ -54,7 +54,7 @@
 
     <input id="filtro" placeholder="Filtrar (ex: NOVUS ANDRADINA LIBERADO)">
 
-    <select id="fRomaneio" title="Romaneio = STATUS preenchido/vazio">
+    <select id="fRomaneio" title="Romaneio = ROMANEIOS preenchido/vazio">
       <option value="TODOS">Romaneio: Todos</option>
       <option value="COM">Romaneio: Com</option>
       <option value="SEM">Romaneio: Sem</option>
@@ -191,6 +191,11 @@
     if (u === "N/A" || u === "NA" || u === "-" || u === "—") return false;
 
     return true;
+  }
+
+  // ✅ ROMANEIO vem da coluna "ROMANEIOS"
+  function getRomaneio(row){
+    return row["ROMANEIOS"] ?? "";
   }
 
   function buildRowSafe(tbody, cells){
@@ -341,7 +346,7 @@
     const texto = document.getElementById("filtro").value.trim().toUpperCase();
     const termos = texto.split(/\s+/).filter(Boolean);
 
-    const fRom = document.getElementById("fRomaneio").value; // STATUS
+    const fRom = document.getElementById("fRomaneio").value; // ROMANEIOS
     const fProg = document.getElementById("fProg").value;     // PROG FAB
 
     // ✅ Atalho: sem texto e selects em TODOS => mostra tudo
@@ -354,21 +359,23 @@
     }
 
     const filtrado = cache.filter(row => {
-      // texto (AND)
+      // texto (AND) — inclui ROMANEIOS também
       if (termos.length){
         const s = [
           row["SERVIÇO"],
           row["LOCAL FABRICAÇÃO"],
           row["MATERIAL"],
           row["PROG FAB"],
-          row["STATUS"]
+          row["STATUS"],
+          getRomaneio(row)
         ].join(" ").toUpperCase();
 
         if (!termos.every(t => s.includes(t))) return false;
       }
 
-      // Romaneio: STATUS preenchido?
-      const temRomaneio = valorPreenchido(row["STATUS"]);
+      // ✅ Romaneio: ROMANEIOS preenchido?
+      const rom = getRomaneio(row);
+      const temRomaneio = valorPreenchido(rom);
       if (fRom === "COM" && !temRomaneio) return false;
       if (fRom === "SEM" && temRomaneio) return false;
 
