@@ -240,6 +240,24 @@
     return true;
   }
 
+function normTxt(v){
+  return String(v ?? "")
+    .replace(/\u00A0/g," ")      // NBSP
+    .replace(/[–—]/g,"-")        // hífen “estranho” -> normal
+    .replace(/\s+/g," ")         // múltiplos espaços -> 1
+    .trim();
+}
+
+function normProg(v){
+  const s = normTxt(v);
+  // se for número, padroniza como número
+  const n = Number(s.replace(",", "."));
+  return Number.isFinite(n) ? String(Math.trunc(n)) : s;
+}
+
+
+  
+
   // ✅ ROMANEIO vem da coluna "ROMANEIOS"
   function getRomaneio(row){
     return row["ROMANEIOS"] ?? "";
@@ -275,8 +293,9 @@
         row["SERVIÇO"] ?? "",
         row["LOCAL FABRICAÇÃO"] ?? "",
         row["MATERIAL"] ?? "",
-        row["PROG FAB"] ?? "",
-        row["STATUS"] ?? "",
+      normProg(row["PROG FAB"]),
+normTxt(row["STATUS"]),
+
         String(qtd),
         fmtPeso(peso)
       ]);
