@@ -97,7 +97,7 @@
     </select>
 
   
-    <button id="btnPizza">Grafico: Peso</button>
+    <button id="btnPizza">Gráfico: Peso</button>
 
     <div class="muted" id="status">Carregando...</div>
   </div>
@@ -493,7 +493,7 @@
   if (btnExport) btnExport.addEventListener("click", exportarExcelFiltrado);
 document.getElementById("btnPizza").addEventListener("click", () => {
     pizzaModo = (pizzaModo === "PESO") ? "QTD" : "PESO";
-    document.getElementById("btnPizza").textContent = pizzaModo === "PESO" ? "Pizza: Peso" : "Pizza: Qtd";
+    document.getElementById("btnPizza").textContent = pizzaModo === "PESO" ? "Gráfico: Peso" : "Gráfico: Qtd";
     atualizarPizza(ultimoFiltrado);
   });
 
