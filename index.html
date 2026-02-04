@@ -252,6 +252,39 @@
       td.textContent = c ?? "";
       tr.appendChild(td);
     }
+
+  // ✅ Junta linhas que parecem iguais na tela (mesmo Serviço/Local/Material/Prog Fab/Status)
+  // Isso evita ficar "separado" quando existe alguma coluna oculta diferente no banco/planilha.
+  function agruparDetalhado(lista){
+    const mapa = new Map();
+
+    for (const row of lista){
+      const key = [
+        String(row["SERVIÇO"] ?? "").trim(),
+        String(row["LOCAL FABRICAÇÃO"] ?? "").trim(),
+        String(row["MATERIAL"] ?? "").trim(),
+        String(row["PROG FAB"] ?? "").trim(),
+        String(row["STATUS"] ?? "").trim()
+      ].join(" | ");
+
+      const qtd = toIntSafe(row["QTD SPOOLS"]);
+      const peso = toNumberPtBR(row["PESO TOTAL"]);
+
+      const cur = mapa.get(key) || {
+        ...row,
+        "QTD SPOOLS": 0,
+        "PESO TOTAL": 0
+      };
+
+      cur["QTD SPOOLS"] = toIntSafe(cur["QTD SPOOLS"]) + qtd;
+      cur["PESO TOTAL"] = toNumberPtBR(cur["PESO TOTAL"]) + peso;
+
+      mapa.set(key, cur);
+    }
+
+    return Array.from(mapa.values());
+  }
+
     tbody.appendChild(tr);
   }
 
@@ -398,10 +431,12 @@
 
     // ✅ Atalho: sem texto e selects em TODOS => mostra tudo
     if (termos.length === 0 && fRom === "TODOS" && fProg === "TODOS") {
-      ultimoFiltrado = cache;
-      const tot = renderDetalhado(cache);
-      renderResumoStatus(cache, tot.totalQtd, tot.totalPeso);
-      atualizarPizza(cache);
+      const listaBase = agruparDetalhado(cache);
+      ultimoFiltrado = listaBase;
+
+      const tot = renderDetalhado(listaBase);
+      renderResumoStatus(listaBase, tot.totalQtd, tot.totalPeso);
+      atualizarPizza(listaBase);
       return;
     }
 
@@ -434,11 +469,12 @@
       return true;
     });
 
-    ultimoFiltrado = filtrado;
+    const filtradoAgr = agruparDetalhado(filtrado);
+    ultimoFiltrado = filtradoAgr;
 
-    const tot = renderDetalhado(filtrado);
-    renderResumoStatus(filtrado, tot.totalQtd, tot.totalPeso);
-    atualizarPizza(filtrado);
+    const tot = renderDetalhado(filtradoAgr);
+    renderResumoStatus(filtradoAgr, tot.totalQtd, tot.totalPeso);
+    atualizarPizza(filtradoAgr);
   }
 
   function debounceFiltro(){
@@ -472,9 +508,9 @@
   document.getElementById("fRomaneio").addEventListener("change", aplicarFiltro);
   document.getElementById("fProg").addEventListener("change", aplicarFiltro);
 
-  document.getElementById("btnExport").addEventListener("click", exportarExcelFiltrado);
-
-  document.getElementById("btnPizza").addEventListener("click", () => {
+  const btnExport = document.getElementById("btnExport");
+  if (btnExport) btnExport.addEventListener("click", exportarExcelFiltrado);
+document.getElementById("btnPizza").addEventListener("click", () => {
     pizzaModo = (pizzaModo === "PESO") ? "QTD" : "PESO";
     document.getElementById("btnPizza").textContent = pizzaModo === "PESO" ? "Pizza: Peso" : "Pizza: Qtd";
     atualizarPizza(ultimoFiltrado);
