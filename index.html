@@ -62,8 +62,7 @@
       }
     }
 
-
-    /* ================================
+/* ================================
    ESCALA AUTOMÁTICA POR TELA (PC)
    ================================ */
 
@@ -88,9 +87,7 @@
   }
 }
 
-
     
-
   </style>
 </head>
 
@@ -116,7 +113,7 @@
       <option value="SEM">Programação: Sem</option>
     </select>
 
-    <button id="btnExport">Exportar Excel (filtrado)</button>
+  
     <button id="btnPizza">Pizza: Peso</button>
 
     <div class="muted" id="status">Carregando...</div>
@@ -262,12 +259,46 @@
     const tb = document.getElementById("tb");
     tb.innerHTML = "";
 
+    // ✅ AGRUPA DUPLICADOS (mesmo Serviço/Local/Material/Prog Fab/Status)
+    // Se a origem vier "quebrada" por alguma coluna que não aparece na tela (ex.: ROMANEIOS),
+    // aqui consolida somando QTD e PESO.
+    const mapa = new Map();
+    for (const row of (lista || [])){
+      if ((row["SERVIÇO"] || "").toUpperCase() === "TOTAL GERAL") continue;
+
+      const key = [
+        String(row["SERVIÇO"] ?? "").replace(/\u00A0/g," ").replace(/\s+/g," ").trim(),
+        String(row["LOCAL FABRICAÇÃO"] ?? "").replace(/\u00A0/g," ").replace(/\s+/g," ").trim(),
+        String(row["MATERIAL"] ?? "").replace(/\u00A0/g," ").replace(/\s+/g," ").trim(),
+        String(row["PROG FAB"] ?? "").replace(/\u00A0/g," ").replace(/\s+/g," ").trim(),
+        String(row["STATUS"] ?? "").replace(/\u00A0/g," ").replace(/\s+/g," ").trim()
+      ].join(" | ");
+
+      const qtd = toIntSafe(row["QTD SPOOLS"]);
+      const peso = toNumberPtBR(row["PESO TOTAL"]);
+
+      const cur = mapa.get(key) || {
+        "SERVIÇO": row["SERVIÇO"] ?? "",
+        "LOCAL FABRICAÇÃO": row["LOCAL FABRICAÇÃO"] ?? "",
+        "MATERIAL": row["MATERIAL"] ?? "",
+        "PROG FAB": row["PROG FAB"] ?? "",
+        "STATUS": row["STATUS"] ?? "",
+        "QTD SPOOLS": 0,
+        "PESO TOTAL": 0
+      };
+
+      cur["QTD SPOOLS"] = toIntSafe(cur["QTD SPOOLS"]) + qtd;
+      cur["PESO TOTAL"] = toNumberPtBR(cur["PESO TOTAL"]) + peso;
+
+      mapa.set(key, cur);
+    }
+
+    const listaAgg = Array.from(mapa.values());
+
     let totalQtd = 0;
     let totalPeso = 0;
 
-    for(const row of lista){
-      if ((row["SERVIÇO"] || "").toUpperCase() === "TOTAL GERAL") continue;
-
+    for(const row of listaAgg){
       const qtd = toIntSafe(row["QTD SPOOLS"]);
       const peso = toNumberPtBR(row["PESO TOTAL"]);
 
@@ -287,7 +318,7 @@
 
     document.getElementById("tq").textContent = totalQtd;
     document.getElementById("tp").textContent = fmtPeso(totalPeso);
-    document.getElementById("pillLinhas").textContent = lista.length + " linhas";
+    document.getElementById("pillLinhas").textContent = listaAgg.length + " linhas";
     return { totalQtd, totalPeso };
   }
 
