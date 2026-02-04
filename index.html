@@ -63,29 +63,24 @@
     }
 
 /* ================================
-   ESCALA AUTOMÁTICA POR TELA (PC)
+   AJUSTE AUTOMÁTICO PARA TELAS GRANDES
    ================================ */
+.container{
+  max-width: 1800px;
+  margin: 0 auto;
+}
 
-/* notebooks médios (13–15") */
-@media (min-width: 1000px) and (max-width: 1366px){
-  body{
-    zoom: 0.9;
+/* monitores muito grandes (2K / ultrawide) */
+@media (min-width: 1900px){
+  .container{
+    max-width: 2000px;
   }
 }
 
-/* notebooks grandes / monitores padrão */
-@media (min-width: 1367px) and (max-width: 1600px){
-  body{
-    zoom: 0.8;
-  }
-}
 
-/* monitores grandes / wide */
-@media (min-width: 1601px){
-  body{
-    zoom: 0.7;
-  }
-}
+
+
+    
 
     
   </style>
