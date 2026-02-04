@@ -252,39 +252,6 @@
       td.textContent = c ?? "";
       tr.appendChild(td);
     }
-
-  // ✅ Junta linhas que parecem iguais na tela (mesmo Serviço/Local/Material/Prog Fab/Status)
-  // Isso evita ficar "separado" quando existe alguma coluna oculta diferente no banco/planilha.
-  function agruparDetalhado(lista){
-    const mapa = new Map();
-
-    for (const row of lista){
-      const key = [
-        String(row["SERVIÇO"] ?? "").trim(),
-        String(row["LOCAL FABRICAÇÃO"] ?? "").trim(),
-        String(row["MATERIAL"] ?? "").trim(),
-        String(row["PROG FAB"] ?? "").trim(),
-        String(row["STATUS"] ?? "").trim()
-      ].join(" | ");
-
-      const qtd = toIntSafe(row["QTD SPOOLS"]);
-      const peso = toNumberPtBR(row["PESO TOTAL"]);
-
-      const cur = mapa.get(key) || {
-        ...row,
-        "QTD SPOOLS": 0,
-        "PESO TOTAL": 0
-      };
-
-      cur["QTD SPOOLS"] = toIntSafe(cur["QTD SPOOLS"]) + qtd;
-      cur["PESO TOTAL"] = toNumberPtBR(cur["PESO TOTAL"]) + peso;
-
-      mapa.set(key, cur);
-    }
-
-    return Array.from(mapa.values());
-  }
-
     tbody.appendChild(tr);
   }
 
@@ -431,12 +398,10 @@
 
     // ✅ Atalho: sem texto e selects em TODOS => mostra tudo
     if (termos.length === 0 && fRom === "TODOS" && fProg === "TODOS") {
-      const listaBase = agruparDetalhado(cache);
-      ultimoFiltrado = listaBase;
-
-      const tot = renderDetalhado(listaBase);
-      renderResumoStatus(listaBase, tot.totalQtd, tot.totalPeso);
-      atualizarPizza(listaBase);
+      ultimoFiltrado = cache;
+      const tot = renderDetalhado(cache);
+      renderResumoStatus(cache, tot.totalQtd, tot.totalPeso);
+      atualizarPizza(cache);
       return;
     }
 
@@ -469,12 +434,11 @@
       return true;
     });
 
-    const filtradoAgr = agruparDetalhado(filtrado);
-    ultimoFiltrado = filtradoAgr;
+    ultimoFiltrado = filtrado;
 
-    const tot = renderDetalhado(filtradoAgr);
-    renderResumoStatus(filtradoAgr, tot.totalQtd, tot.totalPeso);
-    atualizarPizza(filtradoAgr);
+    const tot = renderDetalhado(filtrado);
+    renderResumoStatus(filtrado, tot.totalQtd, tot.totalPeso);
+    atualizarPizza(filtrado);
   }
 
   function debounceFiltro(){
@@ -484,52 +448,20 @@
 
   async function carregar(){
     setStatus("Atualizando...");
-    const stamp = new Date().toLocaleString("pt-BR");
-
-    // 1) Tentativa principal: OpenSheet
     try{
       const r = await fetch(URL, { cache:"no-store" });
-      if(!r.ok) throw new Error("OpenSheet HTTP " + r.status);
+      if(!r.ok){
+        setStatus("Erro ao carregar (" + r.status + ")");
+        return;
+      }
       const data = await r.json();
       cache = Array.isArray(data) ? data : [];
-      setStatus("Linhas recebidas: " + cache.length + " | " + stamp);
+
+      setStatus("Linhas recebidas: " + cache.length + " | " + new Date().toLocaleString("pt-BR"));
       aplicarFiltro();
-      return;
     }catch(err){
-      console.warn("OpenSheet falhou, tentando GVIZ...", err);
-    }
-
-    // 2) Fallback: Google GVIZ (precisa planilha acessível)
-    try{
-      const gvizUrl =
-        `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?` +
-        `tqx=out:json&sheet=${encodeURIComponent(ABA)}`;
-
-      const r2 = await fetch(gvizUrl, { cache:"no-store" });
-      if(!r2.ok) throw new Error("GVIZ HTTP " + r2.status);
-
-      const txt = await r2.text();
-      // GVIZ retorna: google.visualization.Query.setResponse({...});
-      const jsonStr = txt.substring(txt.indexOf("{"), txt.lastIndexOf("}") + 1);
-      const obj = JSON.parse(jsonStr);
-
-      const cols = (obj.table.cols || []).map(c => c.label);
-      const rows = (obj.table.rows || []);
-
-      cache = rows.map(rr => {
-        const out = {};
-        rr.c.forEach((cell, i) => {
-          out[cols[i]] = cell ? (cell.v ?? "") : "";
-        });
-        return out;
-      });
-
-      setStatus("Linhas recebidas: " + cache.length + " | " + stamp + " (GVIZ)");
-      aplicarFiltro();
-      return;
-    }catch(err2){
-      console.error(err2);
-      setStatus("Falha ao carregar (OpenSheet/GVIZ). Verifique se a planilha está acessível/publicada.");
+      console.error(err);
+      setStatus("Falha de rede / planilha sem acesso público.");
     }
   }
 
@@ -540,9 +472,9 @@
   document.getElementById("fRomaneio").addEventListener("change", aplicarFiltro);
   document.getElementById("fProg").addEventListener("change", aplicarFiltro);
 
-  const btnExport = document.getElementById("btnExport");
-  if (btnExport) btnExport.addEventListener("click", exportarExcelFiltrado);
-document.getElementById("btnPizza").addEventListener("click", () => {
+  document.getElementById("btnExport").addEventListener("click", exportarExcelFiltrado);
+
+  document.getElementById("btnPizza").addEventListener("click", () => {
     pizzaModo = (pizzaModo === "PESO") ? "QTD" : "PESO";
     document.getElementById("btnPizza").textContent = pizzaModo === "PESO" ? "Pizza: Peso" : "Pizza: Qtd";
     atualizarPizza(ultimoFiltrado);
