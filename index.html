@@ -240,24 +240,6 @@
     return true;
   }
 
-function normTxt(v){
-  return String(v ?? "")
-    .replace(/\u00A0/g," ")      // NBSP
-    .replace(/[–—]/g,"-")        // hífen “estranho” -> normal
-    .replace(/\s+/g," ")         // múltiplos espaços -> 1
-    .trim();
-}
-
-function normProg(v){
-  const s = normTxt(v);
-  // se for número, padroniza como número
-  const n = Number(s.replace(",", "."));
-  return Number.isFinite(n) ? String(Math.trunc(n)) : s;
-}
-
-
-  
-
   // ✅ ROMANEIO vem da coluna "ROMANEIOS"
   function getRomaneio(row){
     return row["ROMANEIOS"] ?? "";
@@ -293,9 +275,8 @@ function normProg(v){
         row["SERVIÇO"] ?? "",
         row["LOCAL FABRICAÇÃO"] ?? "",
         row["MATERIAL"] ?? "",
-      normProg(row["PROG FAB"]),
-normTxt(row["STATUS"]),
-
+        row["PROG FAB"] ?? "",
+        row["STATUS"] ?? "",
         String(qtd),
         fmtPeso(peso)
       ]);
@@ -503,4 +484,4 @@ normTxt(row["STATUS"]),
 </script>
 
 </body>
-</html>
+</html> tirar exportar excel e corririgr opção do grafico e aumentar largura botoes romaneio e programação
