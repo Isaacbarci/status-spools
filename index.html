@@ -506,9 +506,9 @@
   document.getElementById("fRomaneio").addEventListener("change", aplicarFiltro);
   document.getElementById("fProg").addEventListener("change", aplicarFiltro);
 
-  document.getElementById("btnExport").addEventListener("click", exportarExcelFiltrado);
-
-  document.getElementById("btnPizza").addEventListener("click", () => {
+  const btnExport = document.getElementById("btnExport");
+  if (btnExport) btnExport.addEventListener("click", exportarExcelFiltrado);
+document.getElementById("btnPizza").addEventListener("click", () => {
     pizzaModo = (pizzaModo === "PESO") ? "QTD" : "PESO";
     document.getElementById("btnPizza").textContent = pizzaModo === "PESO" ? "Pizza: Peso" : "Pizza: Qtd";
     atualizarPizza(ultimoFiltrado);
