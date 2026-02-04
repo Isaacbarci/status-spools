@@ -51,14 +51,15 @@
       justify-content:center;
     }
     #pizza{
-      width:100% !important;
-      max-width:360px;   /* PC */
+      width:70% !important;   /* PC: 70% do card */
+      max-width:520px;        /* limite de segurança */
       aspect-ratio: 1 / 1;
       height:auto !important;
     }
     @media (max-width:600px){
       #pizza{
-        max-width:280px; /* Mobile */
+        width:100% !important;
+        max-width:280px;
       }
     }
 
