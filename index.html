@@ -62,13 +62,19 @@
       }
     }
 
-/* Reduz visualização para PC e notebooks */
+/* PC e notebooks: visual 70% ocupando a tela inteira */
 @media (min-width:1000px){
   body{
     transform: scale(0.7);
     transform-origin: top center;
+
+    width: calc(100% / 0.7);
+    height: calc(100% / 0.7);
+
+    overflow-x: hidden;
   }
 }
+
 
     
   </style>
