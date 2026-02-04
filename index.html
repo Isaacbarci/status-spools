@@ -62,32 +62,17 @@
       }
     }
 
-/* ================================
-   ESCALA AUTOMÁTICA POR TELA (PC)
-   ================================ */
+  
+    /* 🔧 Largura maior para ROMANEIO e PROGRAMAÇÃO (PC/Notebook) */
+    #fRomaneio, #fProg{
+      min-width: 220px;
+    }
+    @media (min-width: 980px){
+      #fRomaneio, #fProg{
+        min-width: 260px;
+      }
+    }
 
-/* notebooks médios (13–15") */
-@media (min-width: 1000px) and (max-width: 1366px){
-  body{
-    zoom: 0.9;
-  }
-}
-
-/* notebooks grandes / monitores padrão */
-@media (min-width: 1367px) and (max-width: 1600px){
-  body{
-    zoom: 0.8;
-  }
-}
-
-/* monitores grandes / wide */
-@media (min-width: 1601px){
-  body{
-    zoom: 0.7;
-  }
-}
-
-    
   </style>
 </head>
 
@@ -112,9 +97,7 @@
       <option value="COM">Programação: Com</option>
       <option value="SEM">Programação: Sem</option>
     </select>
-
-  
-    <button id="btnPizza">Pizza: Peso</button>
+<button id="btnPizza">Pizza: Peso</button>
 
     <div class="muted" id="status">Carregando...</div>
   </div>
@@ -364,12 +347,6 @@
     });
   }
 
-  function exportarExcelFiltrado(){
-    if (!ultimoFiltrado || ultimoFiltrado.length === 0){
-      alert("Nada filtrado para exportar.");
-      return;
-    }
-
     const colunas = [
       "SERVIÇO","LOCAL FABRICAÇÃO","MATERIAL",
       "PROG FAB","STATUS","QTD SPOOLS","PESO TOTAL"
@@ -471,16 +448,20 @@
 
   document.getElementById("fRomaneio").addEventListener("change", aplicarFiltro);
   document.getElementById("fProg").addEventListener("change", aplicarFiltro);
-
-  document.getElementById("btnExport").addEventListener("click", exportarExcelFiltrado);
-
-  document.getElementById("btnPizza").addEventListener("click", () => {
+document.getElementById("btnPizza").addEventListener("click", () => {
+    // Alterna modo do gráfico
     pizzaModo = (pizzaModo === "PESO") ? "QTD" : "PESO";
-    document.getElementById("btnPizza").textContent = pizzaModo === "PESO" ? "Pizza: Peso" : "Pizza: Qtd";
-    atualizarPizza(ultimoFiltrado);
-  });
 
-  carregar();
+    // Texto do botão mostra o modo atual
+    document.getElementById("btnPizza").textContent = (pizzaModo === "PESO") ? "Pizza: Peso" : "Pizza: Qtd";
+
+    // Atualiza gráfico com o filtro atual
+    atualizarPizza(ultimoFiltrado);
+
+    // Atualiza a pill "Modo" (garantia)
+    document.getElementById("pizzaInfo").textContent = "Modo: " + (pizzaModo === "PESO" ? "Peso" : "Qtd");
+  });
+carregar();
 </script>
 
 </body>
